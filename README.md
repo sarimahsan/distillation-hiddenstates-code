@@ -16,17 +16,23 @@ The final weights from this project's trial run are published on Hugging Face:
 
 ## 📌 Distillation Architecture
 
-During training, the student model optimizes a composite loss function comprising three components:
+### Loss Components:
+* **Supervised Fine-Tuning Loss ($L_{CE}$)**: Standard Cross-Entropy loss computed on the target response tokens, ensuring the student maintains base instruction-following capabilities.
+* **Logit Distillation Loss ($L_{KD}$)**: Kullback-Leibler (KL) divergence between the student's and teacher's token prediction probability distributions, scaled by temperature $T$ to soften the target probabilities.
+* **Hidden-State Distillation Loss ($L_{hidden}$)**: Mean Squared Error (MSE) between the student's hidden states and the projected teacher's hidden states (using a learnable projection head mapping the teacher's $3072$-dimension down to the student's $896$-dimension).
 
+---
+
+### Mathematical Formulations
+
+#### 1. Composite Objective Function
 $$L_{\text{total}} = w_{ce} L_{CE} + w_{kd} L_{KD} + w_{hidden} L_{hidden}$$
 
-### Loss Components:
-1. **Supervised Fine-Tuning Loss ($L_{CE}$)**: Standard Cross-Entropy loss computed on the target response tokens, ensuring the student maintains base instruction-following capabilities.
-2. **Logit Distillation Loss ($L_{KD}$)**: Kullback-Leibler (KL) divergence between the student's and teacher's token prediction probability distributions scaled by a temperature $T$:
-   $$L_{KD} = T^2 \cdot D_{KL} \left( \text{Softmax}\left(\frac{\text{Logits}_{\text{Teacher}}}{T}\right) \parallel \text{Softmax}\left(\frac{\text{Logits}_{\text{Student}}}{T}\right) \right)$$
-3. **Hidden-State Distillation Loss ($L_{hidden}$)**: Mean Squared Error (MSE) between the student's hidden states and the projected teacher's hidden states:
-   $$L_{hidden} = \frac{1}{N} \sum_{i=1}^{N} \left\| \bar{H}_{\text{student}} - \bar{H}_{\text{projected teacher}} \right\|^2$$
-   Where a learnable **Projection Head** (Linear, MLP, or Attention-based) maps the larger teacher hidden dimension ($3072$) to the smaller student hidden dimension ($896$).
+#### 2. Logit Kullback-Leibler Loss
+$$L_{KD} = T^2 \cdot D_{KL} \left( \text{Softmax}\left(\frac{\text{Logits}_{\text{Teacher}}}{T}\right) \parallel \text{Softmax}\left(\frac{\text{Logits}_{\text{Student}}}{T}\right) \right)$$
+
+#### 3. Projected Hidden-State Loss (Normalized MSE)
+$$L_{hidden} = \frac{1}{N} \sum_{i=1}^{N} \left\| \bar{H}_{\text{student}} - \bar{H}_{\text{projected teacher}} \right\|^2$$
 
 ### Data Flow Diagram
 
